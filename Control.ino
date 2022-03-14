@@ -1,31 +1,49 @@
-#include <Wire.h>
+#include<ADS1115_WE.h> 
+#include<Wire.h>
 #include <Adafruit_ADS1X15.h>
 
-Adafruit_ADS1115 ads; 
+const int sensors_count = 6;
 
-void TCA9548A(uint8_t bus)
-{
-  Wire.beginTransmission(0x70); // TCA9548A адрес 0x70
-  Wire.write(1 << bus); // отправляем байт на выбранную шину
-  Wire.endTransmission();
-}
-void setup()
-{
+Adafruit_ADS1115 ads[sensors_count];
+
+#define AD1115_I2C_ADDRESS 0x48
+#define TCA_I2C_ADDRESS    0x70
+
+void setup() {
   Wire.begin();
-  ads.setGain(GAIN_TWOTHIRDS);
-  ads.begin(); // Инициализация модуля ADS1115
+  Serial.begin(9600);
+
+  for (int i = 0; i < sensors_count; i++)
+  {
+    if (i == 1) continue;
+    setTCAChannel(i);
+    ads[i].setGain(GAIN_TWOTHIRDS);
+    ads[i].begin();
+  }
 }
 
-void loop()
-{
-  uint16_t adc[4];
-  
-  for (int i = 0; i < 4; i++)
+void loop() {
+  for (int i = 0; i < sensors_count; i++)
   {
-    TCA9548A(i);
-    for (int i = 0; i < 4; i++)
+    if (i == 1) continue;
+    setTCAChannel(i);
+    
+    for (int j = 0; j < 4; j++)
     {
-      adc[i] = ads.readADC_SingleEnded(i);
+      if ((i == 2 || i == 5) && j == 2) continue;
+      if (i == 0 && j == 0) continue;
+      Serial.print(ads[i].readADC_SingleEnded(j));
+      Serial.print(" ");
     }
   }
+  Serial.println();
+
+  //Serial.println("****************************");  
+  //delay(10);
+}
+
+void setTCAChannel(byte i){
+  Wire.beginTransmission(TCA_I2C_ADDRESS);
+  Wire.write(1 << i);
+  Wire.endTransmission();  
 }
